@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CabBook — Demo</title>
+<meta name="description" content="Responsive Cab Booking demo without maps — fare estimate, driver matching, history, chatbot, dark mode." />
+<style>
+:root{
+  --bg:#fffaf4;
+  --card:#ffffff;
+  --accent:#ff9800;
+  --muted:#5a4d3d;
+  --success:#ffb300;
+  --danger:#e74c3c;
+}
+[data-theme="dark"]{
+  --bg:#1b130a;
+  --card:#2b1b0d;
+  --accent:#ffa726;
+  --muted:#d8c5a5;
+  --danger:#ff6b6b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+  background:var(--bg);
+  color:var(--muted);
+}
+.container{max-width:1100px;margin:24px auto;padding:18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{
+  width:56px;
+  height:56px;
+  border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),#ffd54f);
+  display:grid;
+  place-items:center;
+  color:white;
+  font-weight:900
+}
+h1{margin:0;font-size:20px;color:var(--muted)}
+p.lead{margin:0;color:var(--muted);font-size:13px}
+.app{display:grid;grid-template-columns:1fr 380px;gap:18px;margin-top:18px}
+@media(max-width:940px){.app{grid-template-columns:1fr}}
+.card{
+  background:var(--card);
+  border-radius:12px;
+  padding:16px;
+  box-shadow:0 6px 20px rgba(2,6,23,0.06)
+}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+input,select,textarea{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e0e6e8;
+  font-size:14px;
+  background:transparent;
+  color:inherit
+}
+.row{display:flex;gap:12px}
+.btn{
+  background:var(--accent);
+  color:white;
+  border:0;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:600;
+  transition:background 0.2s ease
+}
+.btn:hover{opacity:0.9}
+.muted{color:var(--muted);font-size:13px}
+.small{font-size:13px}
+.bookings{margin-top:12px}
+.booking{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e3eaec;
+  margin-bottom:8px;
+  background:rgba(255,152,0,0.08)
+}
+.pill{
+  display:inline-block;
+  padding:6px 8px;
+  border-radius:999px;
+  background:rgba(255,152,0,0.15);
+  font-weight:700;
+  color:var(--accent)
+}
+.chat{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  width:320px;
+  max-width:92vw;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 8px 30px rgba(2,6,23,0.2)
+}
+.chat .header{background:var(--accent);color:white;padding:10px;font-weight:700}
+.chat .body{height:220px;padding:10px;background:var(--card);overflow:auto}
+.chat .input{display:flex;border-top:1px solid #eee}
+.chat .input input{flex:1;padding:10px;border:0}
+.chat .input button{padding:10px;border:0;background:var(--accent);color:white}
+.flex{display:flex;align-items:center;gap:8px}
+.center{text-align:center}
+footer{margin-top:18px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="container" id="app">
+<header>
+<div class="brand">
+<div class="logo">CB</div>
+<div>
+<h1>CabBook</h1>
+<p class="lead">Full demo</p>
+</div>
+</div>
+<div class="flex">
+<button id="themeToggle" class="btn" style="background:transparent;color:var(--accent);border:1px solid rgba(255,152,0,0.35)">Toggle Theme</button>
+</div>
+</header>
+
+<main class="app">
+<section>
+<div class="card">
+<h3 style="margin-top:0">Book a ride</h3>
+<form id="bookingForm">
+<label>Pickup location</label>
+<input id="pickup" placeholder="eg: Simhachalam, Visakhapatnam" required />
+<label style="margin-top:8px">Drop location</label>
+<input id="drop" placeholder="eg: MVP Colony" required />
+<div class="row" style="margin-top:10px">
+<div style="flex:1">
+<label>Date & time</label>
+<input id="datetime" type="datetime-local" />
+</div>
+<div style="width:140px">
+<label>Passengers</label>
+<select id="passengers">
+<option>1</option><option>2</option><option>3</option><option>4</option>
+</select>
+</div>
+</div>
+<label style="margin-top:10px">Vehicle type</label>
+<select id="vehicle">
+<option value="mini">Mini</option>
+<option value="sedan">Sedan</option>
+<option value="suv">SUV</option>
+<option value="lux">Luxury</option>
+</select>
+<label style="margin-top:10px">Notes (optional)</label>
+<textarea id="notes" rows="2" placeholder="Eg: Need child seat, pickup at gate"></textarea>
+<div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+<button class="btn" type="submit">Estimate & Find Driver</button>
+<div id="estFare" class="muted small">Estimated fare: —</div>
+</div>
+</form>
+
+<div id="driverCard" style="margin-top:14px;display:none">
+  <div id="driverInfo"></div>
+  <button class="btn" id="confirmBtn" style="margin-top:10px;display:none">Confirm Booking</button>
+</div>
+
+<div class="card" style="margin-top:14px;background:transparent;box-shadow:none;padding:0">
+<h4 style="margin:0 0 8px 0">Your bookings</h4>
+<div id="bookings" class="bookings muted small">No bookings yet</div>
+</div>
+</div>
+</section>
+
+<aside>
+<div class="card">
+<h3>Ride Summary</h3>
+<div id="summary" class="small">Fill the form and press <strong>Estimate & Find Driver</strong>.</div>
+<div style="margin-top:12px">
+<h4 style="margin:0 0 8px 0">Quick actions</h4>
+<button id="viewHistory" class="btn" style="background:transparent;color:var(--accent);border:1px solid rgba(255,152,0,0.35)">View Booking History</button>
+</div>
+</div>
+<div class="card" style="margin-top:12px">
+<h4 style="margin:0">Notes</h4>
+<p class="small muted" style="margin-top:8px">This demo simulates driver matching and ETA. All data is stored locally in your browser (localStorage).</p>
+</div>
+</aside>
+</main>
+
+<footer class="center">
+Built for demonstration • Deploy on GitHub Pages by adding this file as <code>index.html</code> to your repo root.
+</footer>
+</div>
+
+<!-- Chatbot -->
+<div class="chat" id="chat">
+<div class="header">Ride Assistant 🤖</div>
+<div class="body" id="chatBody"><div style="color:var(--muted);font-size:13px">Hi — ask about fares (eg: "fare from Simhachalam to MVP"), vehicle availability or how to cancel a booking.</div></div>
+<div class="input">
+<input id="chatInput" placeholder="Ask about fare or routes..." />
+<button id="chatSend">▶</button>
+</div>
+</div>
+
+<script>
+// ======= App data =======
+const VEHICLES = { mini:{base:40,per_km:10}, sedan:{base:60,per_km:14}, suv:{base:90,per_km:18}, lux:{base:150,per_km:32} };
+const SAMPLE_DRIVERS = [
+{name:'Ravi',car:'mini',rating:4.7,plate:'AP09AB1234'},
+{name:'Ankita',car:'sedan',rating:4.9,plate:'TS07CD5678'},
+{name:'Mohan',car:'suv',rating:4.6,plate:'KA03EF2345'},
+{name:'Deepa',car:'lux',rating:4.9,plate:'AP16GH9988'}
+];
+function $(id){return document.getElementById(id)}
+const DIST_LOOKUP = {'simhachalam|mvp':12,'vizag|vizag':2,'gajuwaka|simhachalam':9,'dwaraka|mvp':6};
+function estimateDistance(pick, drop){ if(!pick||!drop) return 0;
+const a=pick.toLowerCase().trim().split(',')[0], b=drop.toLowerCase().trim().split(',')[0], key=a+'|'+b, rev=b+'|'+a;
+if(DIST_LOOKUP[key]) return DIST_LOOKUP[key]; if(DIST_LOOKUP[rev]) return DIST_LOOKUP[rev];
+const la=a.replace(/\s+/g,''), lb=b.replace(/\s+/g,''), common=a.split(' ').filter(w=>b.split(' ').includes(w)).length;
+return Math.max(2, Math.round(Math.abs(la-lb)+(la+lb)/12-common)); }
+function calcFare(type,dist){ const v=VEHICLES[type]||VEHICLES.mini; return Math.round((v.base+v.per_km*dist)*applySurge()); }
+function applySurge(){ const hr=new Date().getHours(); if(hr>=7&&hr<=9) return 1.2; if(hr>=18&&hr<=21) return 1.25; return 1.0; }
+function loadBookings(){ try{ return JSON.parse(localStorage.getItem('cabbook_bookings')||'[]')}catch(e){return []}}
+function saveBookings(b){ localStorage.setItem('cabbook_bookings',JSON.stringify(b)); }
+
+function renderBookings(){
+  const box=$('bookings'); const arr=loadBookings();
+  if(!arr.length){ box.textContent='No bookings yet'; box.classList.add('muted'); return; }
+  box.classList.remove('muted'); box.innerHTML='';
+  arr.slice().reverse().forEach(b=>{
+    const el=document.createElement('div'); el.className='booking';
+    el.innerHTML=`<div>
+      <div style="font-weight:700">${b.vehicle.toUpperCase()} • ${b.fareText}</div>
+      <div class="muted small">${b.pick} → ${b.drop} • ${b.timeText}</div>
+      <div style="font-size:13px;color:var(--muted)">Driver: ${b.driver.name} • ${b.driver.plate} • ${b.driver.rating}⭐</div>
+    </div>
+    <div style="text-align:right;display:flex;gap:8px;align-items:center">
+      <button onclick="cancelBooking('${b.id}')" style="padding:6px 8px;border-radius:8px;border:0;background:var(--danger);color:white">Cancel</button>
+      <button onclick="rateBooking('${b.id}')" style="padding:6px 8px;border-radius:8px;border:0;background:var(--accent);color:white">Rate</button>
+    </div>`;
+    box.appendChild(el);
+  });
+}
+window.cancelBooking=function(id){ let arr=loadBookings(); arr=arr.filter(x=>x.id!==id); saveBookings(arr); renderBookings(); alert('Booking canceled.'); }
+window.rateBooking=function(id){ const r=prompt('Rate your ride 1-5 stars'); if(!r) return; const rating=Math.max(1,Math.min(5,Number(r)||5)); let arr=loadBookings(); const idx=arr.findIndex(x=>x.id===id); if(idx!==-1){ arr[idx].rating=rating; saveBookings(arr); renderBookings(); alert('Thanks for rating!'); } }
+
+// ======= Booking form =======
+$('bookingForm').addEventListener('submit',(e)=>{
+  e.preventDefault();
+  const pick=$('pickup').value.trim(), drop=$('drop').value.trim();
+  const vehicle=$('vehicle').value, timeVal=$('datetime').value, notes=$('notes').value;
+  if(!pick||!drop){ alert('Please enter pickup and drop.'); return; }
+  const dist=estimateDistance(pick,drop), fare=calcFare(vehicle,dist);
+  $('estFare').textContent=`Estimated fare: ₹${fare} • ${dist} km`;
+
+  let driver=SAMPLE_DRIVERS.find(d=>d.car===vehicle)||SAMPLE_DRIVERS[Math.floor(Math.random()*SAMPLE_DRIVERS.length)];
+  const eta=Math.max(3,Math.round(Math.random()*12));
+
+  $('driverCard').style.display='block';
+  $('driverInfo').innerHTML=`<div style="font-weight:800">${driver.name} • ${driver.plate}</div>
+  <div class="muted small">${driver.car.toUpperCase()} • ${driver.rating}⭐ • ETA ${eta} min</div>`;
+  const confirmBtn=$('confirmBtn'); confirmBtn.style.display='inline-block';
+
+  confirmBtn.onclick=function(){
+    const id='b_'+Date.now();
+    const booking={id,pick,drop,vehicle,notes,dist,fare,fareText:'₹'+fare,time:timeVal||'ASAP',timeText:timeVal?new Date(timeVal).toLocaleString():'ASAP',driver,status:'On the way'};
+    const arr=loadBookings(); arr.push(booking); saveBookings(arr); renderBookings();
+    $('driverCard').style.display='none'; $('estFare').textContent='Estimated fare: —';
+    $('summary').innerHTML=`<b>${vehicle.toUpperCase()}</b> from <i>${pick}</i> to <i>${drop}</i><br>Fare: ₹${fare} • Driver: ${driver.name} • ETA ${eta} min`;
+    alert(`Booking confirmed! Your driver ${driver.name} will be here in ${eta} min.`);
+  }
+});
+
+// ======= Chatbot =======
+const chatBody=$('chatBody'), chatInput=$('chatInput');
+document.getElementById('chatSend').addEventListener('click', handleChat);
+chatInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter') handleChat(); });
+function handleChat(){ const txt=chatInput.value.trim(); if(!txt) return; appendChat('user',txt); chatInput.value=''; setTimeout(()=>{ appendChat('bot',getBotReply(txt)); },300);}
+function appendChat(who,text){ const d=document.createElement('div'); d.style.margin='8px 0'; d.style.textAlign=who==='bot'?'left':'right'; d.innerHTML=who==='bot'?`<div style="display:inline-block;padding:8px;border-radius:8px;background:#fff3e0;color:#000">${text}</div>`:`<div style="display:inline-block;padding:8px;border-radius:8px;background:var(--accent);color:#fff">${text}</div>`; chatBody.appendChild(d); chatBody.scrollTop=chatBody.scrollHeight; }
+function getBotReply(msg){
+const m=msg.toLowerCase();
+if(m.includes('fare')||m.startsWith('how much')||m.includes('price')){
+const parts=m.match(/from\s+([a-z0-9\s]+)\s+to\s+([a-z0-9\s]+)/i);
+if(parts && parts[1] && parts[2]){ const a=parts[1].trim(), b=parts[2].trim(); const d=estimateDistance(a,b); const f=calcFare('sedan',d); return `Estimated distance ${d} km — approx fare for Sedan: ₹${f}`; }
+return 'Enter pickup & drop in the form and press Estimate to get a fare. Or type: from X to Y';
+}
+if(m.includes('available')||m.includes('vehicles')||m.includes('cars')) return 'Available vehicles: Mini, Sedan, SUV, Luxury.';
+if(m.includes('cancel')) return 'To cancel a booking, open the booking in "Your bookings" and press Cancel.';
+if(m.includes('history')||m.includes('bookings')){ const arr=loadBookings(); if(!arr.length) return 'No previous bookings.'; return `You have ${arr.length} booking(s).`; }
+if(m.includes('help')||m.includes('hi')||m.includes('hello')) return 'Hi! I can estimate fares and explain the booking flow. Try: "fare from Simhachalam to MVP".';
+return "I can help with fare estimates, vehicle availability and bookings. Try asking 'fare from A to B' or 'what vehicles are available'.";
+}
+
+// ======= Theme toggle =======
+const themeToggle=$('themeToggle');
+themeToggle.addEventListener('click',()=>{ if(document.documentElement.hasAttribute('data-theme')){ document.documentElement.removeAttribute('data-theme'); } else { document.documentElement.setAttribute('data-theme','dark'); } });
+
+// ======= View history =======
+$('viewHistory').addEventListener('click',()=>{ const arr=loadBookings(); if(!arr.length) return alert('No bookings yet'); const txt=arr.map(b=>`${b.timeText} • ${b.vehicle||b.vehicle} • ${b.pick} → ${b.drop} • ${b.fareText}`).join('\n\n'); alert(txt); });
+
+// ======= Init =======
+renderBookings();
+</script>
+</body>
+</html>
